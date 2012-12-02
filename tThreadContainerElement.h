@@ -51,7 +51,7 @@
 // Internal includes with ""
 //----------------------------------------------------------------------
 #include "plugins/scheduling/tStartAndPausable.h"
-#include "plugins/scheduling/internal/tThreadContainerThread.h"
+#include "plugins/scheduling/tThreadContainerThread.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -147,7 +147,7 @@ private:
   parameters::tStaticParameter<bool> warn_on_cycle_time_exceed;
 
   /*! Thread - while program is running - in pause mode null */
-  std::shared_ptr<internal::tThreadContainerThread> thread;
+  std::shared_ptr<tThreadContainerThread> thread;
 
   /*! Port to publish time spent in last call to MainLoopCallback() */
   data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time;

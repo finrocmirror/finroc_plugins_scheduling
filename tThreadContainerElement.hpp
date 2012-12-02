@@ -105,9 +105,9 @@ void tThreadContainerElement<BASE>::StartExecution()
     FINROC_LOG_PRINT(WARNING, "Thread is already executing.");
     return;
   }
-  internal::tThreadContainerThread* thread_tmp = new internal::tThreadContainerThread(*this, cycle_time.Get(), warn_on_cycle_time_exceed.Get(), last_cycle_execution_time);
+  tThreadContainerThread* thread_tmp = new tThreadContainerThread(*this, cycle_time.Get(), warn_on_cycle_time_exceed.Get(), last_cycle_execution_time);
   thread_tmp->SetAutoDelete();
-  thread = std::static_pointer_cast<internal::tThreadContainerThread>(thread_tmp->GetSharedPtr());
+  thread = std::static_pointer_cast<tThreadContainerThread>(thread_tmp->GetSharedPtr());
   if (rt_thread.Get())
   {
     thread_tmp->SetRealtime();

@@ -59,10 +59,6 @@ namespace scheduling
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
-namespace internal
-{
-class tThreadContainerThread;
-}
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -105,7 +101,7 @@ public:
 //----------------------------------------------------------------------
 private:
 
-  friend class internal::tThreadContainerThread;
+  friend class tThreadContainerThread;
 
   /*! Task to execute */
   rrlib::thread::tTask& task;

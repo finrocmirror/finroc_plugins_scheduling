@@ -19,7 +19,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 //----------------------------------------------------------------------
-/*!\file    plugins/scheduling/internal/tThreadContainerThread.h
+/*!\file    plugins/scheduling/tThreadContainerThread.h
  *
  * \author  Max Reichardt
  *
@@ -33,8 +33,8 @@
  *
  */
 //----------------------------------------------------------------------
-#ifndef __plugins__scheduling__internal__tThreadContainerThread_h__
-#define __plugins__scheduling__internal__tThreadContainerThread_h__
+#ifndef __plugins__scheduling__tThreadContainerThread_h__
+#define __plugins__scheduling__tThreadContainerThread_h__
 
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
@@ -60,8 +60,6 @@ namespace scheduling
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 class tPeriodicFrameworkElementTask;
-namespace internal
-{
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -169,7 +167,6 @@ private:
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
-}
 }
 }
 

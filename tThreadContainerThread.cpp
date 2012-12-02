@@ -19,7 +19,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 //----------------------------------------------------------------------
-/*!\file    plugins/scheduling/internal/tThreadContainerThread.cpp
+/*!\file    plugins/scheduling/tThreadContainerThread.cpp
  *
  * \author  Max Reichardt
  *
@@ -27,7 +27,7 @@
  *
  */
 //----------------------------------------------------------------------
-#include "plugins/scheduling/internal/tThreadContainerThread.h"
+#include "plugins/scheduling/tThreadContainerThread.h"
 
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
@@ -56,8 +56,6 @@
 namespace finroc
 {
 namespace scheduling
-{
-namespace internal
 {
 
 //----------------------------------------------------------------------
@@ -323,6 +321,5 @@ void tThreadContainerThread::TraceOutgoing(tPeriodicFrameworkElementTask& task, 
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
-}
 }
 }
