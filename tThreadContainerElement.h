@@ -42,11 +42,6 @@
 //----------------------------------------------------------------------
 #include "plugins/parameters/tStaticParameter.h"
 
-#ifdef _LIB_FINROC_PLUGIN_RUNTIME_CONSTRUCTION_PRESENT_
-#include "plugins/runtime_construction/tFinstructableGroup.h"
-#include "plugins/runtime_construction/tGroup.h"
-#endif
-
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
@@ -157,16 +152,6 @@ private:
    */
   void StopThread();
 };
-
-#ifdef _LIB_FINROC_PLUGIN_RUNTIME_CONSTRUCTION_PRESENT_
-
-typedef tThreadContainerElement<runtime_construction::tGroup> tThreadContainer;
-typedef tThreadContainerElement<runtime_construction::tFinstructableGroup> tFinstructableThreadContainer;
-
-extern template class tThreadContainerElement<runtime_construction::tGroup>;
-extern template class tThreadContainerElement<runtime_construction::tFinstructableGroup>;
-
-#endif
 
 //----------------------------------------------------------------------
 // End of namespace declaration
