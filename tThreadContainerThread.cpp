@@ -225,13 +225,15 @@ void tThreadContainerThread::MainLoopCallback()
   tWatchDogTask::Deactivate();
 }
 
-void tThreadContainerThread::Run()
+void tThreadContainerThread::OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target)
 {
-  this->thread_container.GetRuntime().AddListener(*this);
-  tLoopThread::Run();
+  if (source.IsChildOf(this->thread_container) && target.IsChildOf(this->thread_container))
+  {
+    reschedule = true;
+  }
 }
 
-void tThreadContainerThread::RuntimeChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element)
+void tThreadContainerThread::OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element)
 {
   if (element.IsChildOf(this->thread_container, true))
   {
@@ -239,12 +241,10 @@ void tThreadContainerThread::RuntimeChange(core::tRuntimeListener::tEvent change
   }
 }
 
-void tThreadContainerThread::RuntimeEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target)
+void tThreadContainerThread::Run()
 {
-  if (source.IsChildOf(this->thread_container) && target.IsChildOf(this->thread_container))
-  {
-    reschedule = true;
-  }
+  this->thread_container.GetRuntime().AddListener(*this);
+  tLoopThread::Run();
 }
 
 void tThreadContainerThread::StopThread()
