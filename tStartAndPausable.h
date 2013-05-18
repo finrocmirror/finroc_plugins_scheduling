@@ -39,7 +39,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <boost/noncopyable.hpp>
+#include "rrlib/util/tNoncopyable.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -64,7 +64,7 @@ namespace scheduling
 /*!
  * Interface for objects whose execution can be started and paused
  */
-class tStartAndPausable : public boost::noncopyable
+class tStartAndPausable : private rrlib::util::tNoncopyable
 {
 
 //----------------------------------------------------------------------
