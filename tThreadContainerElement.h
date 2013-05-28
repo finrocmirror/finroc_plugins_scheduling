@@ -147,6 +147,9 @@ private:
   /*! Port to publish time spent in last call to MainLoopCallback() */
   data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time;
 
+  /*! Mutex for operations on thread container */
+  rrlib::thread::tMutex mutex;
+
   /*!
    * Stop thread in thread container (does not block - call join thread to block until thread has terminated)
    */

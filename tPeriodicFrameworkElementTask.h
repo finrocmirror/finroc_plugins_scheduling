@@ -78,11 +78,11 @@ struct tPeriodicFrameworkElementTask : public core::tAnnotation
 public:
 
   /*!
-   * \param incoming_ports Element containing incoming ports (relevant for execution order)
-   * \param outgoing_ports Element containing outgoing ports (relevant for execution order)
+   * \param incoming_ports Element containing incoming ports (relevant for execution order) - NULL if there are no incoming ports
+   * \param outgoing_ports Element containing outgoing ports (relevant for execution order) - NULL if there are no outgoing ports
    * \param task Task to execute
    */
-  tPeriodicFrameworkElementTask(core::tEdgeAggregator& incoming_ports, core::tEdgeAggregator& outgoing_ports, rrlib::thread::tTask& task);
+  tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports, rrlib::thread::tTask& task);
 
   /*!
    * \param incoming_ports Elements containing incoming ports (relevant for execution order)

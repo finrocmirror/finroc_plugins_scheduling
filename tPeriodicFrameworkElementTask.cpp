@@ -66,15 +66,21 @@ namespace scheduling
 // Implementation
 //----------------------------------------------------------------------
 
-tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(core::tEdgeAggregator& incoming_ports, core::tEdgeAggregator& outgoing_ports, rrlib::thread::tTask& task) :
+tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports, rrlib::thread::tTask& task) :
   task(task),
   incoming(),
   outgoing(),
   previous_tasks(),
   next_tasks()
 {
-  incoming.push_back(&incoming_ports);
-  outgoing.push_back(&outgoing_ports);
+  if (incoming_ports)
+  {
+    incoming.push_back(incoming_ports);
+  }
+  if (outgoing_ports)
+  {
+    outgoing.push_back(outgoing_ports);
+  }
 }
 
 tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(const std::vector<core::tEdgeAggregator*>& incoming_ports, const std::vector<core::tEdgeAggregator*>& outgoing_ports, rrlib::thread::tTask& task):

@@ -104,6 +104,7 @@ void tThreadContainerThread::MainLoopCallback()
 {
   if (reschedule)
   {
+    // TODO: this rescheduling implementation leads to unpredictable delays
     reschedule = false;
     {
       tLock lock(this->thread_container.GetStructureMutex());

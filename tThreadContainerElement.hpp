@@ -88,7 +88,7 @@ tThreadContainerElement<BASE>::~tThreadContainerElement()
 template <typename BASE>
 void tThreadContainerElement<BASE>::JoinThread()
 {
-  rrlib::thread::tLock l(*this);
+  rrlib::thread::tLock l(mutex);
   if (thread.get() != NULL)
   {
     thread->Join();
@@ -99,7 +99,7 @@ void tThreadContainerElement<BASE>::JoinThread()
 template <typename BASE>
 void tThreadContainerElement<BASE>::StartExecution()
 {
-  rrlib::thread::tLock l(*this);
+  rrlib::thread::tLock l(mutex);
   if (thread)
   {
     FINROC_LOG_PRINT(WARNING, "Thread is already executing.");
@@ -119,7 +119,7 @@ void tThreadContainerElement<BASE>::StartExecution()
 template <typename BASE>
 void tThreadContainerElement<BASE>::StopThread()
 {
-  rrlib::thread::tLock l(*this);
+  rrlib::thread::tLock l(mutex);
   if (thread)
   {
     thread->StopThread();
