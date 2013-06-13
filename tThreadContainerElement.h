@@ -148,7 +148,7 @@ private:
   data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time;
 
   /*! Mutex for operations on thread container */
-  rrlib::thread::tMutex mutex;
+  rrlib::thread::tOrderedMutex mutex;
 
   /*!
    * Stop thread in thread container (does not block - call join thread to block until thread has terminated)
