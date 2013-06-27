@@ -95,7 +95,8 @@ void tThreadContainerThread::HandleWatchdogAlert()
   }
   else
   {
-    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", task->incoming[0]->GetQualifiedName(), "'. Please check your code for infinite loops etc.!");
+    std::string stuck_name = task->incoming.size() > 0 ? task->incoming[0]->GetQualifiedName() : task->GetAnnotated<core::tFrameworkElement>()->GetQualifiedName();
+    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", stuck_name, "'. Please check your code for infinite loops etc.!");
   }
   tWatchDogTask::Deactivate();
 }
