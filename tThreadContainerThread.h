@@ -59,7 +59,7 @@ namespace scheduling
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
-class tPeriodicFrameworkElementTask;
+struct tPeriodicFrameworkElementTask;
 
 //----------------------------------------------------------------------
 // Class declaration
