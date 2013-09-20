@@ -106,14 +106,6 @@ public:
     return fe.GetFlag(tFlag::EDGE_AGGREGATOR) || fe.GetFlag(tFlag::INTERFACE);
   }
 
-  virtual void MainLoopCallback(); // TODO: mark override with gcc 4.7
-
-  virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target); // TODO: mark override with gcc 4.7
-
-  virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element); // TODO: mark override with gcc 4.7
-
-  virtual void Run(); // TODO: mark override with gcc 4.7
-
   virtual void StopThread(); // TODO: mark override with gcc 4.7
 
 //----------------------------------------------------------------------
@@ -153,6 +145,14 @@ private:
 
 
   virtual void HandleWatchdogAlert(); // TODO: mark override with gcc 4.7
+
+  virtual void MainLoopCallback(); // TODO: mark override with gcc 4.7
+
+  virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target); // TODO: mark override with gcc 4.7
+
+  virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element); // TODO: mark override with gcc 4.7
+
+  virtual void Run(); // TODO: mark override with gcc 4.7
 
   /*!
    * Trace outgoing connection

@@ -237,7 +237,7 @@ void tThreadContainerThread::OnEdgeChange(core::tRuntimeListener::tEvent change_
 
 void tThreadContainerThread::OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element)
 {
-  if (element.IsChildOf(this->thread_container, true))
+  if (element.GetAnnotation<tPeriodicFrameworkElementTask>() && element.IsChildOf(this->thread_container, true))
   {
     reschedule = true;
   }
