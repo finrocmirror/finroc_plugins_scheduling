@@ -101,6 +101,28 @@ void tThreadContainerThread::HandleWatchdogAlert()
   tWatchDogTask::Deactivate();
 }
 
+bool tThreadContainerThread::IsModuleInputInterface(core::tFrameworkElement& fe)
+{
+  if (IsInterface(fe))
+  {
+    uint port_count = 0;
+    uint pure_input_port_count = 0;
+    for (auto it = fe.ChildPortsBegin(); it != fe.ChildPortsEnd(); ++it)
+    {
+      if (data_ports::IsDataFlowType(it->GetDataType()))
+      {
+        port_count++;
+        if (it->GetFlag(tFlag::ACCEPTS_DATA) && (!it->GetFlag(tFlag::EMITS_DATA)))
+        {
+          pure_input_port_count++;
+        }
+      }
+    }
+    return (2 * pure_input_port_count) >= port_count; // heuristic: min. 50% of ports are pure input ports
+  }
+  return false;
+}
+
 void tThreadContainerThread::MainLoopCallback()
 {
   if (reschedule)
@@ -177,7 +199,7 @@ void tThreadContainerThread::MainLoopCallback()
         }
 
         // ok, we didn't find module to continue with... (loop)
-        FINROC_LOG_PRINT(WARNING, "Detected loop: doing traceback");
+        //FINROC_LOG_PRINT(WARNING, "Detected loop: doing traceback");
         trace_back.clear();
         tPeriodicFrameworkElementTask* current = tasks[0];
         trace_back.push_back(current);
@@ -197,7 +219,7 @@ void tThreadContainerThread::MainLoopCallback()
           }
           if (end)
           {
-            FINROC_LOG_PRINT(WARNING, "Choosing ", current->incoming[0]->GetQualifiedName(), " as next element");
+            FINROC_LOG_PRINT(WARNING, "Detected loop: Breaking it up at '", current->previous_tasks[0]->incoming[0]->GetQualifiedName(), "' -> '", current->incoming[0]->GetQualifiedName(), "'");
             schedule.push_back(current);
             tasks.erase(std::remove(tasks.begin(), tasks.end(), current), tasks.end());
 
@@ -289,7 +311,7 @@ void tThreadContainerThread::TraceOutgoing(tPeriodicFrameworkElementTask& task, 
       {
         TraceOutgoing(task, dest);
       }
-      else if (IsInterface(dest)) // TODO: check whether this breaks sense-control-groups
+      else if (IsModuleInputInterface(dest)) // in case we have a module with event-triggered execution (and, hence, no periodic task)
       {
         core::tFrameworkElement* parent = dest.GetParent();
         if (parent->GetFlag(tFlag::EDGE_AGGREGATOR))
@@ -300,9 +322,12 @@ void tThreadContainerThread::TraceOutgoing(tPeriodicFrameworkElementTask& task, 
             TraceOutgoing(task, *ea);
           }
         }
+        // if we have e.g. an sensor input interface, only continue with sensor output
+        uint required_flags = dest.GetAllFlags().Raw() & (tFlag::SENSOR_DATA | tFlag::CONTROLLER_DATA).Raw();
+        required_flags |= (tFlag::READY | tFlag::EDGE_AGGREGATOR | tFlag::INTERFACE).Raw();
         for (auto it = parent->ChildrenBegin(); it != parent->ChildrenEnd(); ++it)
         {
-          if (it->GetFlag(tFlag::READY) && it->GetFlag(tFlag::EDGE_AGGREGATOR) && it->GetFlag(tFlag::INTERFACE))
+          if ((it->GetAllFlags().Raw() & required_flags) == required_flags)
           {
             core::tEdgeAggregator& ea = static_cast<core::tEdgeAggregator&>(*it);
             if (std::find(trace.begin(), trace.end(), &ea) == trace.end())

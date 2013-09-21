@@ -71,6 +71,7 @@ struct tPeriodicFrameworkElementTask;
 class tThreadContainerThread : public rrlib::thread::tLoopThread, public core::tRuntimeListener, public rrlib::watchdog::tWatchDogTask
 {
   typedef core::tFrameworkElement::tFlag tFlag;
+  typedef core::tFrameworkElement::tFlags tFlags;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
@@ -95,15 +96,6 @@ public:
   std::shared_ptr<tThreadContainerThread> GetSharedPtr()
   {
     return std::static_pointer_cast<tThreadContainerThread>(tThread::GetSharedPtr());
-  }
-
-  /*!
-   * \param fe Framework element
-   * \return Is framework element an interface?
-   */
-  inline bool IsInterface(core::tFrameworkElement& fe)
-  {
-    return fe.GetFlag(tFlag::EDGE_AGGREGATOR) || fe.GetFlag(tFlag::INTERFACE);
   }
 
   virtual void StopThread(); // TODO: mark override with gcc 4.7
@@ -143,6 +135,20 @@ private:
    */
   tPeriodicFrameworkElementTask* current_task;
 
+  /*!
+   * \param fe Framework element
+   * \return Is framework element an interface?
+   */
+  static inline bool IsInterface(core::tFrameworkElement& fe)
+  {
+    return fe.GetFlag(tFlag::EDGE_AGGREGATOR) || fe.GetFlag(tFlag::INTERFACE);
+  }
+
+  /*!
+   * \param fe Framework element
+   * \return Is framework element an input interface of a module?
+   */
+  static bool IsModuleInputInterface(core::tFrameworkElement& fe);
 
   virtual void HandleWatchdogAlert(); // TODO: mark override with gcc 4.7
 
