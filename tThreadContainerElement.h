@@ -93,7 +93,7 @@ public:
     return cycle_time.Get();
   }
 
-  virtual bool IsExecuting() // TODO: mark override (gcc 4.7)
+  virtual bool IsExecuting() override
   {
     return thread.get();
   }
@@ -103,7 +103,7 @@ public:
    */
   void JoinThread();
 
-  virtual void PauseExecution() // TODO: mark override (gcc 4.7)
+  virtual void PauseExecution() override
   {
     StopThread();
     JoinThread();
@@ -125,7 +125,7 @@ public:
     SetCycleTime(std::chrono::milliseconds(period));
   }
 
-  virtual void StartExecution(); // TODO: mark override (gcc 4.7)
+  virtual void StartExecution() override;
 
 //----------------------------------------------------------------------
 // Private fields and methods

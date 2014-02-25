@@ -98,7 +98,7 @@ public:
     return std::static_pointer_cast<tThreadContainerThread>(tThread::GetSharedPtr());
   }
 
-  virtual void StopThread(); // TODO: mark override with gcc 4.7
+  virtual void StopThread() override;
 
 //----------------------------------------------------------------------
 // Private fields and methods
@@ -150,15 +150,15 @@ private:
    */
   static bool IsModuleInputInterface(core::tFrameworkElement& fe);
 
-  virtual void HandleWatchdogAlert(); // TODO: mark override with gcc 4.7
+  virtual void HandleWatchdogAlert() override;
 
-  virtual void MainLoopCallback(); // TODO: mark override with gcc 4.7
+  virtual void MainLoopCallback() override;
 
-  virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target); // TODO: mark override with gcc 4.7
+  virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target) override;
 
-  virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element); // TODO: mark override with gcc 4.7
+  virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element) override;
 
-  virtual void Run(); // TODO: mark override with gcc 4.7
+  virtual void Run() override;
 
   /*!
    * Trace outgoing connection
