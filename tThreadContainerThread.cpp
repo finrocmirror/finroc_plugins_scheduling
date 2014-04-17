@@ -70,7 +70,9 @@ namespace scheduling
 // Implementation
 //----------------------------------------------------------------------
 
-tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_container, rrlib::time::tDuration default_cycle_time, bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time) :
+tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_container, rrlib::time::tDuration default_cycle_time,
+    bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> execution_duration,
+    data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details) :
   tLoopThread(default_cycle_time, true, warn_on_cycle_time_exceed),
   tWatchDogTask(true),
   thread_container(thread_container),
@@ -80,7 +82,11 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
   non_sensor_tasks(),
   trace(),
   trace_back(),
-  last_cycle_execution_time(last_cycle_execution_time),
+  execution_duration(execution_duration),
+  execution_details(execution_details),
+  total_execution_duration(0),
+  max_execution_duration(0),
+  execution_count(0),
   current_task(NULL)
 {
   this->SetName("ThreadContainer " + thread_container.GetName());
@@ -236,14 +242,70 @@ void tThreadContainerThread::MainLoopCallback()
   }
 
   // execute tasks
-  last_cycle_execution_time.Publish(GetLastCycleTime());
-
   SetDeadLine(rrlib::time::Now() + GetCycleTime() * 4 + std::chrono::seconds(1));
 
-  for (size_t i = 0u; i < schedule.size(); i++)
+  if (execution_details.GetWrapped() == nullptr || execution_count == 0) // we skip profiling the first/initial execution
   {
-    current_task = schedule[i];
-    current_task->task.ExecuteTask();
+    execution_duration.Publish(GetLastCycleTime());
+    for (size_t i = 0u; i < schedule.size(); i++)
+    {
+      current_task = schedule[i];
+      current_task->task.ExecuteTask();
+    }
+    execution_count++;
+  }
+  else
+  {
+    data_ports::tPortDataPointer<std::vector<tTaskProfile>> details = execution_details.GetUnusedBuffer();
+    details->resize(schedule.size() + 1);
+    rrlib::time::tTimestamp start = rrlib::time::Now(true);
+
+    for (size_t i = 0u; i < schedule.size(); i++)
+    {
+      current_task = schedule[i];
+      rrlib::time::tTimestamp task_start = rrlib::time::Now(true);
+      current_task->task.ExecuteTask();
+      rrlib::time::tDuration task_duration = rrlib::time::Now(true) - task_start;
+
+      // Update internal task statistics
+      current_task->total_execution_duration += task_duration;
+      current_task->execution_count++;
+      current_task->max_execution_duration = std::max(task_duration, current_task->max_execution_duration);
+
+      // Fill task profile to publish
+      tTaskProfile& task_profile = (*details)[i + 1];
+      task_profile.handle = current_task->GetAnnotated<core::tFrameworkElement>()->GetHandle();
+      task_profile.last_execution_duration = task_duration;
+      task_profile.max_execution_duration = current_task->max_execution_duration;
+      task_profile.average_execution_duration = rrlib::time::tDuration(current_task->total_execution_duration.count() / current_task->execution_count);
+      task_profile.total_execution_duration = current_task->total_execution_duration;
+    }
+
+    // Update thread statistics
+    rrlib::time::tDuration duration = rrlib::time::Now(true) - start;
+    this->total_execution_duration += duration;
+    this->execution_count++;
+    this->max_execution_duration = std::max(duration, this->max_execution_duration);
+
+    // Fill thread profile to publish
+    tTaskProfile& profile = (*details)[0];
+    profile.handle = thread_container.GetHandle();
+    profile.last_execution_duration = duration;
+    profile.max_execution_duration = this->max_execution_duration;
+    assert(execution_count > 1);
+    profile.average_execution_duration = rrlib::time::tDuration(this->total_execution_duration.count() / (this->execution_count - 1)); // we did not include initial execution for profile statistics
+    profile.total_execution_duration = this->total_execution_duration;
+
+    // Publish profiling information
+    for (size_t i = 0u; i < schedule.size(); i++)
+    {
+      if (schedule[i]->execution_duration.GetWrapped())
+      {
+        schedule[i]->execution_duration.Publish((*details)[i + 1].last_execution_duration);
+      }
+    }
+    execution_duration.Publish(duration);
+    execution_details.Publish(details);
   }
 
   tWatchDogTask::Deactivate();

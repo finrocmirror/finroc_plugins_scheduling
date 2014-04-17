@@ -145,7 +145,14 @@ private:
   std::shared_ptr<tThreadContainerThread> thread;
 
   /*! Port to publish time spent in last call to MainLoopCallback() */
-  data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time;
+  data_ports::tOutputPort<rrlib::time::tDuration> execution_duration;
+
+  /*!
+   * Port to publish details on execution (port is only created if profiling is enabled)
+   * The first element contains the profile the whole thread container.
+   * The other elements contain the profile the executed tasks - in the order of their execution
+   */
+  data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details;
 
   /*! Mutex for operations on thread container */
   rrlib::thread::tOrderedMutex mutex;

@@ -36,6 +36,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "plugins/scheduling/scheduling.h"
 #include "plugins/scheduling/tExecutionControl.h"
 
 //----------------------------------------------------------------------
@@ -71,7 +72,8 @@ tThreadContainerElement<BASE>::tThreadContainerElement(ARGS && ... args) :
   cycle_time("Cycle Time", this, std::chrono::milliseconds(40), data_ports::tBounds<rrlib::time::tDuration>(rrlib::time::tDuration::zero(), std::chrono::seconds(60))),
   warn_on_cycle_time_exceed("Warn on cycle time exceed", this, true),
   thread(),
-  last_cycle_execution_time("Last Cycle execution time", this),
+  execution_duration("Execution Duration", new core::tFrameworkElement(this, "Scheduling")),
+  execution_details("Details", execution_duration.GetParent(), IsProfilingEnabled() ? BASE::tFlag::PORT : BASE::tFlag::DELETED),
   mutex("tThreadContainerElement", static_cast<int>(core::tLockOrderLevel::RUNTIME_REGISTER) - 1)
 {
   this->AddAnnotation(*new tExecutionControl(*this));
@@ -107,7 +109,7 @@ void tThreadContainerElement<BASE>::StartExecution()
     FINROC_LOG_PRINT(WARNING, "Thread is already executing.");
     return;
   }
-  tThreadContainerThread* thread_tmp = new tThreadContainerThread(*this, cycle_time.Get(), warn_on_cycle_time_exceed.Get(), last_cycle_execution_time);
+  tThreadContainerThread* thread_tmp = new tThreadContainerThread(*this, cycle_time.Get(), warn_on_cycle_time_exceed.Get(), execution_duration, execution_details);
   thread_tmp->SetAutoDelete();
   thread = std::static_pointer_cast<tThreadContainerThread>(thread_tmp->GetSharedPtr());
   if (rt_thread.Get())

@@ -43,10 +43,12 @@
 //----------------------------------------------------------------------
 #include "rrlib/thread/tTask.h"
 #include "core/port/tEdgeAggregator.h"
+#include "plugins/data_ports/tOutputPort.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "plugins/scheduling/scheduling.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -77,19 +79,25 @@ struct tPeriodicFrameworkElementTask : public core::tAnnotation
 //----------------------------------------------------------------------
 public:
 
+  typedef data_ports::tOutputPort<rrlib::time::tDuration> tDurationPort;
+
   /*!
    * \param incoming_ports Element containing incoming ports (relevant for execution order) - NULL if there are no incoming ports
    * \param outgoing_ports Element containing outgoing ports (relevant for execution order) - NULL if there are no outgoing ports
    * \param task Task to execute
+   * \param execution_duration Port to publish last execution duration of task (optional)
    */
-  tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports, rrlib::thread::tTask& task);
+  tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports,
+                                rrlib::thread::tTask& task, tDurationPort execution_duration = tDurationPort());
 
   /*!
    * \param incoming_ports Elements containing incoming ports (relevant for execution order)
    * \param outgoing_ports Elements containing outgoing ports (relevant for execution order)
    * \param task Task to execute
+   * \param execution_duration Port to publish last execution duration of task (optional)
    */
-  tPeriodicFrameworkElementTask(const std::vector<core::tEdgeAggregator*>& incoming_ports, const std::vector<core::tEdgeAggregator*>& outgoing_ports, rrlib::thread::tTask& task);
+  tPeriodicFrameworkElementTask(const std::vector<core::tEdgeAggregator*>& incoming_ports, const std::vector<core::tEdgeAggregator*>& outgoing_ports,
+                                rrlib::thread::tTask& task, tDurationPort execution_duration = tDurationPort());
 
   /*!
    * \return Is this a sensor task?
@@ -117,6 +125,18 @@ private:
 
   /*! Tasks to execute after this one (updated during scheduling) */
   std::vector<tPeriodicFrameworkElementTask*> next_tasks;
+
+  /*! Total execution duration of task */
+  rrlib::time::tDuration total_execution_duration;
+
+  /*! Maximum execution duration of task */
+  rrlib::time::tDuration max_execution_duration;
+
+  /*! Number of times that task was executed */
+  int64_t execution_count;
+
+  /*! Port to publish last execution duration of task (optional) */
+  tDurationPort execution_duration;
 };
 
 //----------------------------------------------------------------------

@@ -66,12 +66,17 @@ namespace scheduling
 // Implementation
 //----------------------------------------------------------------------
 
-tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports, rrlib::thread::tTask& task) :
+tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(core::tEdgeAggregator* incoming_ports, core::tEdgeAggregator* outgoing_ports,
+    rrlib::thread::tTask& task, tDurationPort execution_duration) :
   task(task),
   incoming(),
   outgoing(),
   previous_tasks(),
-  next_tasks()
+  next_tasks(),
+  total_execution_duration(0),
+  max_execution_duration(0),
+  execution_count(0),
+  execution_duration(execution_duration)
 {
   if (incoming_ports)
   {
@@ -83,12 +88,17 @@ tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(core::tEdgeAggregat
   }
 }
 
-tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(const std::vector<core::tEdgeAggregator*>& incoming_ports, const std::vector<core::tEdgeAggregator*>& outgoing_ports, rrlib::thread::tTask& task):
+tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(const std::vector<core::tEdgeAggregator*>& incoming_ports,
+    const std::vector<core::tEdgeAggregator*>& outgoing_ports, rrlib::thread::tTask& task, tDurationPort execution_duration) :
   task(task),
   incoming(incoming_ports),
   outgoing(outgoing_ports),
   previous_tasks(),
-  next_tasks()
+  next_tasks(),
+  total_execution_duration(0),
+  max_execution_duration(0),
+  execution_count(0),
+  execution_duration(execution_duration)
 {
 }
 

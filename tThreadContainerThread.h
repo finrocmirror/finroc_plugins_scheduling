@@ -47,6 +47,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "plugins/scheduling/tTaskProfile.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -79,7 +80,8 @@ class tThreadContainerThread : public rrlib::thread::tLoopThread, public core::t
 public:
 
   tThreadContainerThread(core::tFrameworkElement& thread_container, rrlib::time::tDuration default_cycle_time,
-                         bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time);
+                         bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> execution_duration,
+                         data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details);
 
   /*!
    * \return Returns pointer to current thread if it is a tThreadContainerThread - NULL otherwise
@@ -127,13 +129,31 @@ private:
   std::vector<tPeriodicFrameworkElementTask*> trace_back;
 
   /*! Port to publish time spent in last call to MainLoopCallback() */
-  data_ports::tOutputPort<rrlib::time::tDuration> last_cycle_execution_time;
+  data_ports::tOutputPort<rrlib::time::tDuration> execution_duration;
+
+  /*!
+   * Port to publish details on execution (port is only created if profiling is enabled)
+   * The first element contains the profile the whole thread container.
+   * The other elements contain the profile the executed tasks - in the order of their execution
+   */
+  data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details;
+
+  /*! Total execution duration of thread */
+  rrlib::time::tDuration total_execution_duration;
+
+  /*! Maximum execution duration of schedule */
+  rrlib::time::tDuration max_execution_duration;
+
+  /*! Number of times that schedule was executed */
+  int64_t execution_count;
+
 
   /*!
    * Thread sets this to the task it is currently executing (for error message, should it get stuck)
    * NULL if not executing any task
    */
   tPeriodicFrameworkElementTask* current_task;
+
 
   /*!
    * \param fe Framework element
