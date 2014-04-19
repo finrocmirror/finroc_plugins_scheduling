@@ -93,14 +93,14 @@ struct tTaskProfile
 
 };
 
-rrlib::serialization::tOutputStream &operator << (rrlib::serialization::tOutputStream &stream, const tTaskProfile &profile)
+inline rrlib::serialization::tOutputStream &operator << (rrlib::serialization::tOutputStream &stream, const tTaskProfile &profile)
 {
   stream << profile.last_execution_duration << profile.max_execution_duration << profile.average_execution_duration
          << profile.total_execution_duration << profile.handle;
   return stream;
 }
 
-rrlib::serialization::tInputStream &operator >> (rrlib::serialization::tInputStream &stream, tTaskProfile &profile)
+inline rrlib::serialization::tInputStream &operator >> (rrlib::serialization::tInputStream &stream, tTaskProfile &profile)
 {
   stream >> profile.last_execution_duration >> profile.max_execution_duration >> profile.average_execution_duration
          >> profile.total_execution_duration >> profile.handle;
