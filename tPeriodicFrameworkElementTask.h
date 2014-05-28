@@ -100,6 +100,11 @@ public:
                                 rrlib::thread::tTask& task, tDurationPort execution_duration = tDurationPort());
 
   /*!
+   * \return Log description - e.g. for debug output
+   */
+  std::string GetLogDescription();
+
+  /*!
    * \return Is this a sensor task?
    */
   bool IsSenseTask();

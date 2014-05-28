@@ -154,6 +154,13 @@ private:
    */
   tPeriodicFrameworkElementTask* current_task;
 
+  /*!
+   * Helper function for debug output.
+   *
+   * \param task_list List of tasks
+   * \return String with fully-qualified names of each attached framework element of list elements in a new line
+   */
+  std::string CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list);
 
   /*!
    * \param fe Framework element

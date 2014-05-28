@@ -92,6 +92,25 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
   this->SetName("ThreadContainer " + thread_container.GetName());
 }
 
+std::string tThreadContainerThread::CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list)
+{
+  std::ostringstream stream;
+  for (auto it = task_list.rbegin(); it != task_list.rend(); ++it)
+  {
+    stream << (it != task_list.rbegin() ? "-> " : "   ");
+    stream << (*it)->GetLogDescription() << std::endl;
+    for (auto next = (*it)->next_tasks.begin(); next != (*it)->next_tasks.end(); ++next)
+    {
+      if (*next == *task_list.rbegin())
+      {
+        stream << "-> " << (*next)->GetLogDescription();
+        return stream.str();
+      }
+    }
+  }
+  return "ERROR";
+}
+
 void tThreadContainerThread::HandleWatchdogAlert()
 {
   tPeriodicFrameworkElementTask* task = current_task;
@@ -225,7 +244,7 @@ void tThreadContainerThread::MainLoopCallback()
           }
           if (end)
           {
-            FINROC_LOG_PRINT(WARNING, "Detected loop: Breaking it up at '", current->previous_tasks[0]->incoming[0]->GetQualifiedName(), "' -> '", current->incoming[0]->GetQualifiedName(), "'");
+            FINROC_LOG_PRINT(WARNING, "Detected loop:\n", CreateLoopDebugOutput(trace_back), "\nBreaking it up at '", current->previous_tasks[0]->GetLogDescription(), "' -> '", current->GetLogDescription(), "' (The latter will be executed before the former)");
             schedule.push_back(current);
             tasks.erase(std::remove(tasks.begin(), tasks.end(), current), tasks.end());
 

@@ -102,6 +102,23 @@ tPeriodicFrameworkElementTask::tPeriodicFrameworkElementTask(const std::vector<c
 {
 }
 
+std::string tPeriodicFrameworkElementTask::GetLogDescription()
+{
+  core::tFrameworkElement* annotated = this->GetAnnotated<core::tFrameworkElement>();
+  if (!annotated)
+  {
+    return "Unattached task";
+  }
+  if (annotated->GetFlag(core::tFrameworkElement::tFlag::INTERFACE))
+  {
+    return annotated->GetParent()->GetQualifiedName() + "  (" + (annotated->GetFlag(core::tFrameworkElement::tFlag::SENSOR_DATA) ? "Sense" : "Control") + ")";
+  }
+  else
+  {
+    return annotated->GetQualifiedName();
+  }
+}
+
 bool tPeriodicFrameworkElementTask::IsSenseTask()
 {
   for (auto it = outgoing.begin(); it < outgoing.end(); it++)
