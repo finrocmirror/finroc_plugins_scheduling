@@ -113,20 +113,14 @@ private:
   /*! true, when thread needs to make a new schedule before next run */
   std::atomic<bool> reschedule;
 
-  /*! simple schedule: Tasks will be executed in specified order */
+  /*!
+   * simple schedule: Tasks will be executed in specified order
+   * There are four sets of tasks: [initial tasks, sense tasks, control tasks, other tasks]
+   */
   std::vector<tPeriodicFrameworkElementTask*> schedule;
 
-  /*! temporary list of tasks that need to be scheduled */
-  std::vector<tPeriodicFrameworkElementTask*> tasks;
-
-  /*! temporary list of tasks that need to be scheduled - which are not sensor tasks */
-  std::vector<tPeriodicFrameworkElementTask*> non_sensor_tasks;
-
-  /*! temporary variable for scheduling algorithm: trace we're currently following */
-  std::vector<core::tEdgeAggregator*> trace;
-
-  /*! temporary variable: trace back */
-  std::vector<tPeriodicFrameworkElementTask*> trace_back;
+  /*! Indices where the different sets of tasks start in the schedule */
+  size_t task_set_first_index[4];
 
   /*! Port to publish time spent in last call to MainLoopCallback() */
   data_ports::tOutputPort<rrlib::time::tDuration> execution_duration;
@@ -163,6 +157,24 @@ private:
   std::string CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list);
 
   /*!
+   * Applies function to each task connected with specified edge aggregator.
+   * Traces and follows all connections as long as elements are managed by this thread container (depth-first search).
+   * The ABORT_PREDICATE (binary predicate) is called on each edge aggregator encountered on the way.
+   * If it is false, the path beyond is not followed.
+   *
+   * (note: can be implemented in .cpp file, since it is only called from there)
+   *
+   * \param origin Edge aggregator to start with
+   * \param trace Path in data flow graph we're currently checking. Maintained, to avoid that follow cycles again and again.
+   *              Is not cleared by this function. Elements are merely pushed and popped.
+   * \param function Function to call for each on each connected task. It needs two parameters:
+   *                 'tPeriodicFrameworkElementTask& connected_task'
+   * \tparam TTraceReverse Traces outgoing connections if false - or in reverse direction of data flow graph if true.
+   */
+  template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
+  void ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction function, bool trace_reverse);
+
+  /*!
    * \param fe Framework element
    * \return Is framework element an interface?
    */
@@ -186,15 +198,6 @@ private:
   virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element) override;
 
   virtual void Run() override;
-
-  /*!
-   * Trace outgoing connection
-   *
-   * \param task Task we're tracing from
-   * \param outgoing edge aggregator with outgoing connections to follow
-   */
-  void TraceOutgoing(tPeriodicFrameworkElementTask& task, core::tEdgeAggregator& outgoing);
-
 };
 
 //----------------------------------------------------------------------

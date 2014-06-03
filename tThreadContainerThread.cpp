@@ -34,6 +34,7 @@
 //----------------------------------------------------------------------
 #include "core/tRuntimeEnvironment.h"
 #include "core/port/tAggregatedEdge.h"
+#include <set>
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -61,6 +62,16 @@ namespace scheduling
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
+// Flags used for storing information in tPeriodicFrameworkElementTask::task_classification
+enum tTaskClassificationFlag
+{
+  eSENSE_TASK = 1,
+  eSENSE_DEPENDENCY = 2,
+  eSENSE_DEPENDENT = 4,
+  eCONTROL_TASK = 8,
+  eCONTROL_DEPENDENCY = 16,
+  eCONTROL_DEPENDENT = 32
+};
 
 //----------------------------------------------------------------------
 // Const values
@@ -70,6 +81,24 @@ namespace scheduling
 // Implementation
 //----------------------------------------------------------------------
 
+// Abort predicates for tThreadContainerThread::ForEachConnectedTask()
+static bool IsSensorInterface(core::tEdgeAggregator& ea)
+{
+  return ea.GetFlag(core::tFrameworkElement::tFlag::SENSOR_DATA);
+}
+static bool IsControllerInterface(core::tEdgeAggregator& ea)
+{
+  return ea.GetFlag(core::tFrameworkElement::tFlag::CONTROLLER_DATA);
+}
+static bool IsSensorOrControllerInterface(core::tEdgeAggregator& ea)
+{
+  return IsSensorInterface(ea) || IsControllerInterface(ea);
+}
+static bool AlwaysFalse(core::tEdgeAggregator& ea)
+{
+  return false;
+}
+
 tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_container, rrlib::time::tDuration default_cycle_time,
     bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> execution_duration,
     data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details) :
@@ -78,16 +107,13 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
   thread_container(thread_container),
   reschedule(true),
   schedule(),
-  tasks(),
-  non_sensor_tasks(),
-  trace(),
-  trace_back(),
-  execution_duration(execution_duration),
-  execution_details(execution_details),
-  total_execution_duration(0),
-  max_execution_duration(0),
-  execution_count(0),
-  current_task(NULL)
+  task_set_first_index { 0, 0, 0, 0 },
+                     execution_duration(execution_duration),
+                     execution_details(execution_details),
+                     total_execution_duration(0),
+                     max_execution_duration(0),
+                     execution_count(0),
+                     current_task(NULL)
 {
   this->SetName("ThreadContainer " + thread_container.GetName());
 }
@@ -109,6 +135,94 @@ std::string tThreadContainerThread::CreateLoopDebugOutput(const std::vector<tPer
     }
   }
   return "ERROR";
+}
+
+template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
+void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction function, bool trace_reverse)
+{
+  // Add to trace stack
+  trace.push_back(&origin);
+
+  auto it = trace_reverse ? origin.IncomingConnectionsBegin() : origin.OutgoingConnectionsBegin();
+  auto end = trace_reverse ? origin.IncomingConnectionsEnd() : origin.OutgoingConnectionsEnd();
+  for (; it != end; ++it)
+  {
+    core::tAggregatedEdge& aggregated_edge = **it;
+    core::tEdgeAggregator& dest = trace_reverse ? aggregated_edge.source : aggregated_edge.destination;
+    if (tExecutionControl::Find(dest)->GetAnnotated<core::tFrameworkElement>() != &thread_container)
+    {
+      continue;
+    }
+    if (ABORT_PREDICATE(dest))
+    {
+      continue;
+    }
+
+    if (std::find(trace.begin(), trace.end(), &dest) == trace.end())
+    {
+      // Have we reached another task?
+      tPeriodicFrameworkElementTask* connected_task = dest.GetAnnotation<tPeriodicFrameworkElementTask>();
+      if (connected_task == NULL && IsInterface(dest))
+      {
+        connected_task = dest.GetParent()->GetAnnotation<tPeriodicFrameworkElementTask>();
+      }
+      if (connected_task == NULL && trace_reverse && IsInterface(dest))
+      {
+        for (auto child = dest.GetParent()->ChildrenBegin(); child != dest.GetParent()->ChildrenEnd(); ++child)
+        {
+          tPeriodicFrameworkElementTask* task_to_test = child->template GetAnnotation<tPeriodicFrameworkElementTask>();
+          if (task_to_test && std::find(task_to_test->outgoing.begin(), task_to_test->outgoing.end(), &dest) != task_to_test->outgoing.end())
+          {
+            connected_task = task_to_test;
+            break;
+          }
+        }
+      }
+      if (connected_task)
+      {
+        function(*connected_task);
+        continue;
+      }
+
+      // continue from this edge aggregator
+      auto it_next = trace_reverse ? dest.IncomingConnectionsBegin() : dest.OutgoingConnectionsBegin();
+      auto end_next = trace_reverse ? dest.IncomingConnectionsEnd() : dest.OutgoingConnectionsEnd();
+      if (it_next != end_next) // not empty?
+      {
+        ForEachConnectedTask<ABORT_PREDICATE, TFunction>(dest, trace, function, trace_reverse);
+      }
+      else if (IsModuleInputInterface(dest)) // in case we have a module with event-triggered execution (and, hence, no periodic task)
+      {
+        core::tFrameworkElement* parent = dest.GetParent();
+        if (parent->GetFlag(tFlag::EDGE_AGGREGATOR))
+        {
+          core::tEdgeAggregator* ea = static_cast<core::tEdgeAggregator*>(parent);
+          if (std::find(trace.begin(), trace.end(), ea) == trace.end())
+          {
+            ForEachConnectedTask<ABORT_PREDICATE, TFunction>(*ea, trace, function, trace_reverse);
+          }
+        }
+        // if we have e.g. an sensor input interface, only continue with sensor output
+        uint required_flags = dest.GetAllFlags().Raw() & (tFlag::SENSOR_DATA | tFlag::CONTROLLER_DATA).Raw();
+        required_flags |= (tFlag::READY | tFlag::EDGE_AGGREGATOR | tFlag::INTERFACE).Raw();
+        for (auto it = parent->ChildrenBegin(); it != parent->ChildrenEnd(); ++it)
+        {
+          if ((it->GetAllFlags().Raw() & required_flags) == required_flags)
+          {
+            core::tEdgeAggregator& ea = static_cast<core::tEdgeAggregator&>(*it);
+            if (std::find(trace.begin(), trace.end(), &ea) == trace.end())
+            {
+              ForEachConnectedTask<ABORT_PREDICATE, TFunction>(ea, trace, function, trace_reverse);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // remove from trace stack
+  assert(trace[trace.size() - 1] == &origin);
+  trace.pop_back();
 }
 
 void tThreadContainerThread::HandleWatchdogAlert()
@@ -152,16 +266,19 @@ void tThreadContainerThread::MainLoopCallback()
 {
   if (reschedule)
   {
-    // TODO: this rescheduling implementation leads to unpredictable delays
+    // TODO: this rescheduling implementation leads to unpredictable delays (scheduling could be performed by another thread)
     reschedule = false;
     {
       tLock lock(this->thread_container.GetStructureMutex());
-
-      // find tasks
-      tasks.clear();
-      non_sensor_tasks.clear();
       schedule.clear();
 
+      /*! Sets of tasks that need to be scheduled */
+      std::set<tPeriodicFrameworkElementTask*> sense_tasks, control_tasks, initial_tasks, other_tasks;
+
+      /*! Sense and control interfaces */
+      std::set<core::tEdgeAggregator*> sense_interfaces, control_interfaces;
+
+      // find tasks and classified interfaces
       for (auto it = thread_container.SubElementsBegin(true); it != thread_container.SubElementsEnd(); ++it)
       {
         if ((!it->IsReady()) || tExecutionControl::Find(*it)->GetAnnotated<core::tFrameworkElement>() != &thread_container)    // don't handle elements in nested thread containers
@@ -173,87 +290,222 @@ void tThreadContainerThread::MainLoopCallback()
         {
           task->previous_tasks.clear();
           task->next_tasks.clear();
+          task->task_classification = 0;
           if (task->IsSenseTask())
           {
-            tasks.push_back(task);
+            task->task_classification = eSENSE_TASK;
+            sense_tasks.insert(task);
+            sense_interfaces.insert(task->incoming.begin(), task->incoming.end());
+            sense_interfaces.insert(task->outgoing.begin(), task->outgoing.end());
+          }
+          else if (task->IsControlTask())
+          {
+            task->task_classification = eCONTROL_TASK;
+            control_tasks.insert(task);
+            control_interfaces.insert(task->incoming.begin(), task->incoming.end());
+            control_interfaces.insert(task->outgoing.begin(), task->outgoing.end());
           }
           else
           {
-            non_sensor_tasks.push_back(task);
+            other_tasks.insert(task);
+          }
+        }
+
+        if (it->GetFlag(tFlag::INTERFACE))
+        {
+          if (it->GetFlag(tFlag::SENSOR_DATA))
+          {
+            sense_interfaces.insert(static_cast<core::tEdgeAggregator*>(&(*it)));
+          }
+          if (it->GetFlag(tFlag::CONTROLLER_DATA))
+          {
+            control_interfaces.insert(static_cast<core::tEdgeAggregator*>(&(*it)));
           }
         }
       }
 
-      tasks.insert(tasks.end(), non_sensor_tasks.begin(), non_sensor_tasks.end());
-
-      // create task graph
-      for (auto task = tasks.begin(); task != tasks.end(); ++task)
+      // classify tasks by flooding
+      std::vector<core::tEdgeAggregator*> trace; // trace we're currently following
       {
-        // trace outgoing connections
-        for (auto it = (*task)->outgoing.begin(); it < (*task)->outgoing.end(); ++it)
+        int flag_to_check = 0;
+        std::function<void (tPeriodicFrameworkElementTask&)> function = [&](tPeriodicFrameworkElementTask & connected_task)
         {
-          TraceOutgoing(**task, **it);
-        }
-      }
-
-      // now create schedule
-      while (tasks.size() > 0)
-      {
-        // do we have task without previous tasks?
-        bool found = false;
-        for (auto it = tasks.begin(); it != tasks.end(); ++it)
-        {
-          tPeriodicFrameworkElementTask* task = *it;
-          if (task->previous_tasks.size() == 0)
+          if ((connected_task.task_classification & (flag_to_check | eSENSE_TASK | eCONTROL_TASK)) == 0)
           {
-            schedule.push_back(task);
-            tasks.erase(std::remove(tasks.begin(), tasks.end(), task), tasks.end());
-            found = true;
-
-            // delete from next tasks' previous task list
-            for (auto next = task->next_tasks.begin(); next != task->next_tasks.end(); ++next)
+            connected_task.task_classification |= flag_to_check;
+            bool reverse = (flag_to_check == eSENSE_DEPENDENCY || flag_to_check == eCONTROL_DEPENDENCY);
+            for (core::tEdgeAggregator * next : (reverse ? connected_task.incoming : connected_task.outgoing))
             {
-              (*next)->previous_tasks.erase(std::remove((*next)->previous_tasks.begin(), (*next)->previous_tasks.end(), task), (*next)->previous_tasks.end());
+              ForEachConnectedTask<IsSensorOrControllerInterface>(*next, trace, function, reverse);
             }
-            break;
+          }
+        };
+
+        for (core::tEdgeAggregator * interface : sense_interfaces)
+        {
+          flag_to_check = eSENSE_DEPENDENT;
+          ForEachConnectedTask<IsSensorOrControllerInterface>(*interface, trace, function, false);
+          flag_to_check = eSENSE_DEPENDENCY;
+          ForEachConnectedTask<IsSensorOrControllerInterface>(*interface, trace, function, true);
+        }
+        for (core::tEdgeAggregator * interface : control_interfaces)
+        {
+          flag_to_check = eCONTROL_DEPENDENT;
+          ForEachConnectedTask<IsSensorOrControllerInterface>(*interface, trace, function, false);
+          flag_to_check = eCONTROL_DEPENDENCY;
+          ForEachConnectedTask<IsSensorOrControllerInterface>(*interface, trace, function, true);
+        }
+      }
+
+      std::set<tPeriodicFrameworkElementTask*> other_tasks_copy = other_tasks;
+      for (tPeriodicFrameworkElementTask * other_task : other_tasks_copy)
+      {
+        bool sense_task = (other_task->task_classification & (eSENSE_DEPENDENCY | eSENSE_DEPENDENT)) == (eSENSE_DEPENDENCY | eSENSE_DEPENDENT);
+        bool control_task = (other_task->task_classification & (eCONTROL_DEPENDENCY | eCONTROL_DEPENDENT)) == (eCONTROL_DEPENDENCY | eCONTROL_DEPENDENT);
+        if (!(sense_task || control_task))
+        {
+          // max. two flags are possible - check all combinations
+          if ((other_task->task_classification & (eSENSE_DEPENDENCY | eCONTROL_DEPENDENCY)) == (eSENSE_DEPENDENCY | eCONTROL_DEPENDENCY))
+          {
+            initial_tasks.insert(other_task);
+            other_tasks.erase(other_task);
+            continue;
+          }
+          if ((other_task->task_classification & (eSENSE_DEPENDENT | eCONTROL_DEPENDENT)) == (eSENSE_DEPENDENT | eCONTROL_DEPENDENT))
+          {
+            continue;
+          }
+          if ((other_task->task_classification & (eSENSE_DEPENDENCY | eCONTROL_DEPENDENT)) == (eSENSE_DEPENDENCY | eCONTROL_DEPENDENT))
+          {
+            sense_task = true;
+          }
+          if ((other_task->task_classification & (eSENSE_DEPENDENT | eCONTROL_DEPENDENCY)) == (eSENSE_DEPENDENT | eCONTROL_DEPENDENCY))
+          {
+            control_task = true;
           }
         }
-        if (found)
+        if (!(sense_task || control_task))
         {
-          continue;
+          // max. one flag is possible
+          sense_task = other_task->task_classification & (eSENSE_DEPENDENCY | eSENSE_DEPENDENT);
+          control_task = other_task->task_classification & (eCONTROL_DEPENDENCY | eCONTROL_DEPENDENT);
         }
 
-        // ok, we didn't find module to continue with... (loop)
-        //FINROC_LOG_PRINT(WARNING, "Detected loop: doing traceback");
-        trace_back.clear();
-        tPeriodicFrameworkElementTask* current = tasks[0];
-        trace_back.push_back(current);
-        while (true)
+        if (sense_task || control_task)
         {
-          bool end = true;
-          for (size_t i = 0u; i < current->previous_tasks.size(); i++)
+          other_tasks.erase(other_task);
+          if (sense_task)
           {
-            tPeriodicFrameworkElementTask* prev = current->previous_tasks[i];
-            if (std::find(trace_back.begin(), trace_back.end(), prev) == trace_back.end())
+            sense_tasks.insert(other_task);
+          }
+          if (control_task)
+          {
+            control_tasks.insert(other_task);
+          }
+        }
+      }
+
+      /*! temporary variable for trace backs */
+      std::vector<tPeriodicFrameworkElementTask*> trace_back;
+
+      // create task graphs for the four relevant sets of tasks and schedule them
+      std::set<tPeriodicFrameworkElementTask*>* task_sets[4] = { &initial_tasks, &sense_tasks, &control_tasks, &other_tasks };
+      for (size_t i = 0; i < 4; i++)
+      {
+        trace.clear();
+        std::set<tPeriodicFrameworkElementTask*>& task_set = *task_sets[i];
+        auto task = task_set.begin();
+        std::function<void (tPeriodicFrameworkElementTask&)> function = [&](tPeriodicFrameworkElementTask & connected_task)
+        {
+          if (task_set.find(&connected_task) != task_set.end() &&
+              std::find((*task)->next_tasks.begin(), (*task)->next_tasks.end(), &connected_task) == (*task)->next_tasks.end())
+          {
+            (*task)->next_tasks.push_back(&connected_task);
+            connected_task.previous_tasks.push_back(*task);
+          }
+        };
+
+        // create task graph
+        for (; task != task_set.end(); ++task)
+        {
+          // trace outgoing connections to other elements in task set
+          for (auto it = (*task)->outgoing.begin(); it < (*task)->outgoing.end(); ++it)
+          {
+            if (i == 1)
             {
-              end = false;
-              current = prev;
-              trace_back.push_back(current);
+              ForEachConnectedTask<IsControllerInterface>(**it, trace, function, false);
+            }
+            else if (i == 2)
+            {
+              ForEachConnectedTask<IsSensorInterface>(**it, trace, function, false);
+            }
+            else
+            {
+              ForEachConnectedTask<AlwaysFalse>(**it, trace, function, false);
+            }
+          }
+        }
+
+        task_set_first_index[i] = schedule.size();
+
+        // now create schedule
+        while (task_set.size() > 0)
+        {
+          // do we have a task without previous tasks?
+          bool found = false;
+          for (auto it = task_set.begin(); it != task_set.end(); ++it)
+          {
+            tPeriodicFrameworkElementTask* task = *it;
+            if (task->previous_tasks.size() == 0)
+            {
+              schedule.push_back(task);
+              task_set.erase(task);
+              found = true;
+
+              // delete from next tasks' previous task list
+              for (auto next = task->next_tasks.begin(); next != task->next_tasks.end(); ++next)
+              {
+                (*next)->previous_tasks.erase(std::remove((*next)->previous_tasks.begin(), (*next)->previous_tasks.end(), task), (*next)->previous_tasks.end());
+              }
               break;
             }
           }
-          if (end)
+          if (found)
           {
-            FINROC_LOG_PRINT(WARNING, "Detected loop:\n", CreateLoopDebugOutput(trace_back), "\nBreaking it up at '", current->previous_tasks[0]->GetLogDescription(), "' -> '", current->GetLogDescription(), "' (The latter will be executed before the former)");
-            schedule.push_back(current);
-            tasks.erase(std::remove(tasks.begin(), tasks.end(), current), tasks.end());
+            continue;
+          }
 
-            // delete from next tasks' previous task list
-            for (auto next = current->next_tasks.begin(); next != current->next_tasks.end(); ++next)
+          // ok, we didn't find task to continue with... (loop)
+          trace_back.clear();
+          tPeriodicFrameworkElementTask* current = *task_set.begin();
+          trace_back.push_back(current);
+          while (true)
+          {
+            bool end = true;
+            for (size_t i = 0u; i < current->previous_tasks.size(); i++)
             {
-              (*next)->previous_tasks.erase(std::remove((*next)->previous_tasks.begin(), (*next)->previous_tasks.end(), current), (*next)->previous_tasks.end());
+              tPeriodicFrameworkElementTask* prev = current->previous_tasks[i];
+              if (std::find(trace_back.begin(), trace_back.end(), prev) == trace_back.end())
+              {
+                end = false;
+                current = prev;
+                trace_back.push_back(current);
+                break;
+              }
             }
-            break;
+            if (end)
+            {
+              FINROC_LOG_PRINT(WARNING, "Detected loop:\n", CreateLoopDebugOutput(trace_back), "\nBreaking it up at '", current->previous_tasks[0]->GetLogDescription(), "' -> '", current->GetLogDescription(), "' (The latter will be executed before the former)");
+              schedule.push_back(current);
+              task_set.erase(current);
+
+              // delete from next tasks' previous task list
+              for (auto next = current->next_tasks.begin(); next != current->next_tasks.end(); ++next)
+              {
+                (*next)->previous_tasks.erase(std::remove((*next)->previous_tasks.begin(), (*next)->previous_tasks.end(), current), (*next)->previous_tasks.end());
+              }
+              break;
+            }
           }
         }
       }
@@ -298,7 +550,19 @@ void tThreadContainerThread::MainLoopCallback()
       task_profile.max_execution_duration = current_task->max_execution_duration;
       task_profile.average_execution_duration = rrlib::time::tDuration(current_task->total_execution_duration.count() / current_task->execution_count);
       task_profile.total_execution_duration = current_task->total_execution_duration;
+      task_profile.task_classification = tTaskClassification::OTHER;
     }
+
+    // Set classification
+    for (size_t i = task_set_first_index[1]; i < task_set_first_index[2]; i++)
+    {
+      (*details)[i + 1].task_classification = tTaskClassification::SENSE;  // +1, because first task is at index 1
+    }
+    for (size_t i = task_set_first_index[2]; i < task_set_first_index[3]; i++)
+    {
+      (*details)[i + 1].task_classification = tTaskClassification::CONTROL;
+    }
+
 
     // Update thread statistics
     rrlib::time::tDuration duration = rrlib::time::Now(true) - start;
@@ -357,73 +621,6 @@ void tThreadContainerThread::StopThread()
   tLock lock(this->thread_container.GetStructureMutex());
   this->thread_container.GetRuntime().RemoveListener(*this);
   tLoopThread::StopThread();
-}
-
-void tThreadContainerThread::TraceOutgoing(tPeriodicFrameworkElementTask& task, core::tEdgeAggregator& outgoing)
-{
-  // add to trace stack
-  trace.push_back(&outgoing);
-
-  for (auto it = outgoing.OutgoingConnectionsBegin(); it != outgoing.OutgoingConnectionsEnd(); ++it)
-  {
-    core::tAggregatedEdge& aggregated_edge = **it;
-    core::tEdgeAggregator& dest = aggregated_edge.destination;
-
-    if (std::find(trace.begin(), trace.end(), &dest) == trace.end())
-    {
-      // ok, have we reached another task?
-      tPeriodicFrameworkElementTask* task2 = dest.GetAnnotation<tPeriodicFrameworkElementTask>();
-      if (task2 == NULL && IsInterface(dest))
-      {
-        task2 = dest.GetParent()->GetAnnotation<tPeriodicFrameworkElementTask>();
-      }
-      if (task2)
-      {
-        if (std::find(task.next_tasks.begin(), task.next_tasks.end(), task2) == task.next_tasks.end())
-        {
-          task.next_tasks.push_back(task2);
-          task2->previous_tasks.push_back(&task);
-        }
-        continue;
-      }
-
-      // continue from this edge aggregator
-      if (dest.OutgoingConnectionsBegin() != dest.OutgoingConnectionsEnd()) // not empty?
-      {
-        TraceOutgoing(task, dest);
-      }
-      else if (IsModuleInputInterface(dest)) // in case we have a module with event-triggered execution (and, hence, no periodic task)
-      {
-        core::tFrameworkElement* parent = dest.GetParent();
-        if (parent->GetFlag(tFlag::EDGE_AGGREGATOR))
-        {
-          core::tEdgeAggregator* ea = static_cast<core::tEdgeAggregator*>(parent);
-          if (std::find(trace.begin(), trace.end(), ea) == trace.end())
-          {
-            TraceOutgoing(task, *ea);
-          }
-        }
-        // if we have e.g. an sensor input interface, only continue with sensor output
-        uint required_flags = dest.GetAllFlags().Raw() & (tFlag::SENSOR_DATA | tFlag::CONTROLLER_DATA).Raw();
-        required_flags |= (tFlag::READY | tFlag::EDGE_AGGREGATOR | tFlag::INTERFACE).Raw();
-        for (auto it = parent->ChildrenBegin(); it != parent->ChildrenEnd(); ++it)
-        {
-          if ((it->GetAllFlags().Raw() & required_flags) == required_flags)
-          {
-            core::tEdgeAggregator& ea = static_cast<core::tEdgeAggregator&>(*it);
-            if (std::find(trace.begin(), trace.end(), &ea) == trace.end())
-            {
-              TraceOutgoing(task, ea);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // remove from trace stack
-  assert(trace[trace.size() - 1] == &outgoing);
-  trace.pop_back();
 }
 
 //----------------------------------------------------------------------

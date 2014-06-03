@@ -40,6 +40,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
+#include "rrlib/serialization/serialization.h"
 #include "core/tFrameworkElement.h"
 
 //----------------------------------------------------------------------
@@ -57,6 +58,14 @@ namespace scheduling
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
+
+/*! Enum to specify which kind of task a task profile is associated to */
+enum class tTaskClassification
+{
+  SENSE,
+  CONTROL,
+  OTHER
+};
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -83,12 +92,16 @@ struct tTaskProfile
   /*! Handle of framework element associated with task */
   core::tFrameworkElement::tHandle handle;
 
+  /*! Specifies which kind of task a task profile is associated to (used e.g. as hint for finstruct) */
+  tTaskClassification task_classification;
+
   tTaskProfile() :
     last_execution_duration(0),
     max_execution_duration(0),
     average_execution_duration(0),
     total_execution_duration(0),
-    handle(0)
+    handle(0),
+    task_classification(tTaskClassification::OTHER)
   {}
 
 };
@@ -96,14 +109,14 @@ struct tTaskProfile
 inline rrlib::serialization::tOutputStream &operator << (rrlib::serialization::tOutputStream &stream, const tTaskProfile &profile)
 {
   stream << profile.last_execution_duration << profile.max_execution_duration << profile.average_execution_duration
-         << profile.total_execution_duration << profile.handle;
+         << profile.total_execution_duration << profile.handle << profile.task_classification;
   return stream;
 }
 
 inline rrlib::serialization::tInputStream &operator >> (rrlib::serialization::tInputStream &stream, tTaskProfile &profile)
 {
   stream >> profile.last_execution_duration >> profile.max_execution_duration >> profile.average_execution_duration
-         >> profile.total_execution_duration >> profile.handle;
+         >> profile.total_execution_duration >> profile.handle >> profile.task_classification;
   return stream;
 }
 

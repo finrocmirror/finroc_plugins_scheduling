@@ -105,6 +105,11 @@ public:
   std::string GetLogDescription();
 
   /*!
+   * \return Is this a control task?
+   */
+  bool IsControlTask();
+
+  /*!
    * \return Is this a sensor task?
    */
   bool IsSenseTask();
@@ -130,6 +135,9 @@ private:
 
   /*! Tasks to execute after this one (updated during scheduling) */
   std::vector<tPeriodicFrameworkElementTask*> next_tasks;
+
+  /*! Classification of task (used and updated only during scheduling - also meaning is defined there) */
+  int task_classification;
 
   /*! Total execution duration of task */
   rrlib::time::tDuration total_execution_duration;

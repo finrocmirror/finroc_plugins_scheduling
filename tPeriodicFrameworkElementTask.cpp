@@ -138,6 +138,25 @@ bool tPeriodicFrameworkElementTask::IsSenseTask()
   return false;
 }
 
+bool tPeriodicFrameworkElementTask::IsControlTask()
+{
+  for (auto it = outgoing.begin(); it < outgoing.end(); it++)
+  {
+    if ((*it)->GetFlag(core::tFrameworkElement::tFlag::CONTROLLER_DATA))
+    {
+      return true;
+    }
+  }
+  for (auto it = incoming.begin(); it < incoming.end(); it++)
+  {
+    if ((*it)->GetFlag(core::tFrameworkElement::tFlag::CONTROLLER_DATA))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
