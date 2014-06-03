@@ -71,8 +71,6 @@ struct tPeriodicFrameworkElementTask;
  */
 class tThreadContainerThread : public rrlib::thread::tLoopThread, public core::tRuntimeListener, public rrlib::watchdog::tWatchDogTask
 {
-  typedef core::tFrameworkElement::tFlag tFlag;
-  typedef core::tFrameworkElement::tFlags tFlags;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
@@ -172,16 +170,7 @@ private:
    * \tparam TTraceReverse Traces outgoing connections if false - or in reverse direction of data flow graph if true.
    */
   template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
-  void ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction function, bool trace_reverse);
-
-  /*!
-   * \param fe Framework element
-   * \return Is framework element an interface?
-   */
-  static inline bool IsInterface(core::tFrameworkElement& fe)
-  {
-    return fe.GetFlag(tFlag::EDGE_AGGREGATOR) || fe.GetFlag(tFlag::INTERFACE);
-  }
+  void ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse);
 
   /*!
    * \param fe Framework element

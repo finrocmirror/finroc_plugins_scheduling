@@ -62,7 +62,8 @@ namespace scheduling
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
-// Flags used for storing information in tPeriodicFrameworkElementTask::task_classification
+
+/*! Flags used for storing information in tPeriodicFrameworkElementTask::task_classification */
 enum tTaskClassificationFlag
 {
   eSENSE_TASK = 1,
@@ -72,6 +73,8 @@ enum tTaskClassificationFlag
   eCONTROL_DEPENDENCY = 16,
   eCONTROL_DEPENDENT = 32
 };
+
+typedef core::tFrameworkElement::tFlag tFlag;
 
 //----------------------------------------------------------------------
 // Const values
@@ -98,6 +101,16 @@ static bool AlwaysFalse(core::tEdgeAggregator& ea)
 {
   return false;
 }
+
+/*!
+ * \param fe Framework element
+ * \return Is framework element an interface?
+ */
+static inline bool IsInterface(core::tFrameworkElement& fe)
+{
+  return fe.GetFlag(tFlag::EDGE_AGGREGATOR) || fe.GetFlag(tFlag::INTERFACE);
+}
+
 
 tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_container, rrlib::time::tDuration default_cycle_time,
     bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> execution_duration,
@@ -138,7 +151,7 @@ std::string tThreadContainerThread::CreateLoopDebugOutput(const std::vector<tPer
 }
 
 template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
-void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction function, bool trace_reverse)
+void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse)
 {
   // Add to trace stack
   trace.push_back(&origin);
@@ -170,11 +183,14 @@ void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin,
       {
         for (auto child = dest.GetParent()->ChildrenBegin(); child != dest.GetParent()->ChildrenEnd(); ++child)
         {
-          tPeriodicFrameworkElementTask* task_to_test = child->template GetAnnotation<tPeriodicFrameworkElementTask>();
-          if (task_to_test && std::find(task_to_test->outgoing.begin(), task_to_test->outgoing.end(), &dest) != task_to_test->outgoing.end())
+          if (IsInterface(*child))
           {
-            connected_task = task_to_test;
-            break;
+            tPeriodicFrameworkElementTask* task_to_test = child->template GetAnnotation<tPeriodicFrameworkElementTask>();
+            if (task_to_test && std::find(task_to_test->outgoing.begin(), task_to_test->outgoing.end(), &dest) != task_to_test->outgoing.end())
+            {
+              connected_task = task_to_test;
+              break;
+            }
           }
         }
       }
