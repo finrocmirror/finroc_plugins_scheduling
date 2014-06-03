@@ -79,6 +79,7 @@ typedef core::tFrameworkElement::tFlag tFlag;
 //----------------------------------------------------------------------
 // Const values
 //----------------------------------------------------------------------
+#define FINROC_PORT_BASED_SCHEDULING
 
 //----------------------------------------------------------------------
 // Implementation
@@ -150,22 +151,59 @@ std::string tThreadContainerThread::CreateLoopDebugOutput(const std::vector<tPer
   return "ERROR";
 }
 
+template <typename T1, typename T2>
+void Increment(bool trace_reverse, T1& it_incoming, T2& it_outgoing)
+{
+  if (trace_reverse)
+  {
+    it_incoming++;
+  }
+  else
+  {
+    it_outgoing++;
+  }
+}
+
 template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
 void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse)
 {
   // Add to trace stack
   trace.push_back(&origin);
 
-  auto it = trace_reverse ? origin.IncomingConnectionsBegin() : origin.OutgoingConnectionsBegin();
-  auto end = trace_reverse ? origin.IncomingConnectionsEnd() : origin.OutgoingConnectionsEnd();
-  for (; it != end; ++it)
+#ifdef FINROC_PORT_BASED_SCHEDULING
+  for (auto it = origin.ChildPortsBegin(); it != origin.ChildPortsEnd(); ++it)
   {
-    core::tAggregatedEdge& aggregated_edge = **it;
-    core::tEdgeAggregator& dest = trace_reverse ? aggregated_edge.source : aggregated_edge.destination;
-    if (tExecutionControl::Find(dest)->GetAnnotated<core::tFrameworkElement>() != &thread_container)
+    ForEachConnectedTask<ABORT_PREDICATE, TFunction>(*it, trace, function, trace_reverse);
+  }
+
+  // remove from trace stack
+  assert(trace[trace.size() - 1] == &origin);
+  trace.pop_back();
+}
+
+template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
+void tThreadContainerThread::ForEachConnectedTask(core::tAbstractPort& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse)
+{
+#endif
+
+  auto it_incoming = origin.IncomingConnectionsBegin();
+  auto end_incoming = origin.IncomingConnectionsEnd();
+  auto it_outgoing = origin.OutgoingConnectionsBegin();
+  auto end_outgoing = origin.OutgoingConnectionsEnd();
+  for (; trace_reverse ? it_incoming != end_incoming : it_outgoing != end_outgoing; Increment(trace_reverse, it_incoming, it_outgoing))
+  {
+#ifdef FINROC_PORT_BASED_SCHEDULING
+    core::tAbstractPort& dest_port = trace_reverse ? *it_incoming : *it_outgoing;
+    core::tEdgeAggregator* dest_aggregator = core::tEdgeAggregator::GetAggregator(dest_port);
+#else
+    core::tAggregatedEdge& aggregated_edge = trace_reverse ? **it_incoming : **it_outgoing;
+    core::tEdgeAggregator* dest_aggregator = trace_reverse ? &aggregated_edge.source : &aggregated_edge.destination;
+#endif
+    if ((!dest_aggregator) || tExecutionControl::Find(*dest_aggregator)->GetAnnotated<core::tFrameworkElement>() != &thread_container)
     {
       continue;
     }
+    core::tEdgeAggregator& dest = *dest_aggregator;
     if (ABORT_PREDICATE(dest))
     {
       continue;
@@ -205,7 +243,13 @@ void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin,
       auto end_next = trace_reverse ? dest.IncomingConnectionsEnd() : dest.OutgoingConnectionsEnd();
       if (it_next != end_next) // not empty?
       {
+#ifdef FINROC_PORT_BASED_SCHEDULING
+        trace.push_back(&dest);
+        ForEachConnectedTask<ABORT_PREDICATE, TFunction>(dest_port, trace, function, trace_reverse);
+        trace.pop_back();
+#else
         ForEachConnectedTask<ABORT_PREDICATE, TFunction>(dest, trace, function, trace_reverse);
+#endif
       }
       else if (IsModuleInputInterface(dest)) // in case we have a module with event-triggered execution (and, hence, no periodic task)
       {
@@ -236,9 +280,11 @@ void tThreadContainerThread::ForEachConnectedTask(core::tEdgeAggregator& origin,
     }
   }
 
+#ifndef FINROC_PORT_BASED_SCHEDULING
   // remove from trace stack
   assert(trace[trace.size() - 1] == &origin);
   trace.pop_back();
+#endif
 }
 
 void tThreadContainerThread::HandleWatchdogAlert()

@@ -160,17 +160,21 @@ private:
    * The ABORT_PREDICATE (binary predicate) is called on each edge aggregator encountered on the way.
    * If it is false, the path beyond is not followed.
    *
-   * (note: can be implemented in .cpp file, since it is only called from there)
+   * Note that the function may be called multiple times with the same edge aggregator.
    *
-   * \param origin Edge aggregator to start with
+   * (implementation note: can be implemented in .cpp file, since it is only called from there)
+   *
+   * \param origin Element to start with (tEdgeAggregator or tAbstractPort)
    * \param trace Path in data flow graph we're currently checking. Maintained, to avoid that follow cycles again and again.
    *              Is not cleared by this function. Elements are merely pushed and popped.
-   * \param function Function to call for each on each connected task. It needs two parameters:
+   * \param function Function to call for each on each connected task. It needs one parameter:
    *                 'tPeriodicFrameworkElementTask& connected_task'
-   * \tparam TTraceReverse Traces outgoing connections if false - or in reverse direction of data flow graph if true.
+   * \param trace_reverse Traces outgoing connections if false - or in reverse direction of data flow graph if true.
    */
-  template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), class TFunction>
+  template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), typename TFunction>
   void ForEachConnectedTask(core::tEdgeAggregator& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse);
+  template <bool (ABORT_PREDICATE)(core::tEdgeAggregator&), typename TFunction>
+  void ForEachConnectedTask(core::tAbstractPort& origin, std::vector<core::tEdgeAggregator*>& trace, TFunction& function, bool trace_reverse);
 
   /*!
    * \param fe Framework element
