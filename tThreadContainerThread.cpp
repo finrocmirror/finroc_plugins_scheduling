@@ -333,6 +333,7 @@ void tThreadContainerThread::MainLoopCallback()
     {
       tLock lock(this->thread_container.GetStructureMutex());
       schedule.clear();
+      rrlib::time::tTimestamp start_time = rrlib::time::Now();
 
       /*! Sets of tasks that need to be scheduled */
       std::set<tPeriodicFrameworkElementTask*> sense_tasks, control_tasks, initial_tasks, other_tasks;
@@ -570,6 +571,12 @@ void tThreadContainerThread::MainLoopCallback()
             }
           }
         }
+      }
+
+      FINROC_LOG_PRINT(DEBUG_VERBOSE_1, "Created schedule in ", rrlib::time::ToIsoString(rrlib::time::Now() - start_time));
+      for (size_t i = 0; i < schedule.size(); ++i)
+      {
+        FINROC_LOG_PRINT(DEBUG_VERBOSE_1, "  ", i, ": ", schedule[i]->GetLogDescription());
       }
     }
   }
