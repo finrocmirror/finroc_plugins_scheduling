@@ -85,6 +85,8 @@ typedef core::tFrameworkElement::tFlag tFlag;
 // Implementation
 //----------------------------------------------------------------------
 
+tThreadContainerThread* tThreadContainerThread::single_thread_container = nullptr;
+
 // Abort predicates for tThreadContainerThread::ForEachConnectedTask()
 static bool IsSensorInterface(core::tEdgeAggregator& ea)
 {
@@ -130,6 +132,15 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
                      current_task(NULL)
 {
   this->SetName("ThreadContainer " + thread_container.GetName());
+#ifdef RRLIB_SINGLE_THREADED
+  assert(single_thread_container == nullptr);
+  single_thread_container = this;
+#endif
+}
+
+tThreadContainerThread::~tThreadContainerThread()
+{
+  single_thread_container = nullptr;
 }
 
 std::string tThreadContainerThread::CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list)

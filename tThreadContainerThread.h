@@ -81,13 +81,19 @@ public:
                          bool warn_on_cycle_time_exceed, data_ports::tOutputPort<rrlib::time::tDuration> execution_duration,
                          data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details);
 
+  virtual ~tThreadContainerThread();
+
   /*!
    * \return Returns pointer to current thread if it is a tThreadContainerThread - NULL otherwise
    */
   static tThreadContainerThread* CurrentThread()
   {
+#ifndef RRLIB_SINGLE_THREADED
     rrlib::thread::tThread& thread = rrlib::thread::tThread::CurrentThread();
     return (typeid(thread) == typeid(tThreadContainerThread)) ? static_cast<tThreadContainerThread*>(&thread) : NULL;
+#else
+    return single_thread_container;
+#endif
   }
 
   /*!
@@ -97,6 +103,8 @@ public:
   {
     return std::static_pointer_cast<tThreadContainerThread>(tThread::GetSharedPtr());
   }
+
+  virtual void Run() override;
 
   virtual void StopThread() override;
 
@@ -154,6 +162,9 @@ private:
    */
   std::string CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list);
 
+  /*! Contains pointer to the only thread container in single threaded mode */
+  static tThreadContainerThread* single_thread_container;
+
   /*!
    * Applies function to each task connected with specified edge aggregator.
    * Traces and follows all connections as long as elements are managed by this thread container (depth-first search).
@@ -189,8 +200,6 @@ private:
   virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target) override;
 
   virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element) override;
-
-  virtual void Run() override;
 };
 
 //----------------------------------------------------------------------
