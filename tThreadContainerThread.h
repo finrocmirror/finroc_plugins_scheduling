@@ -104,6 +104,8 @@ public:
     return std::static_pointer_cast<tThreadContainerThread>(tThread::GetSharedPtr());
   }
 
+  virtual void MainLoopCallback() override;
+
   virtual void Run() override;
 
   virtual void StopThread() override;
@@ -194,8 +196,6 @@ private:
   static bool IsModuleInputInterface(core::tFrameworkElement& fe);
 
   virtual void HandleWatchdogAlert() override;
-
-  virtual void MainLoopCallback() override;
 
   virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target) override;
 
