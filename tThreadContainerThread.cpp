@@ -210,7 +210,8 @@ void tThreadContainerThread::ForEachConnectedTask(core::tAbstractPort& origin, s
     core::tAggregatedEdge& aggregated_edge = trace_reverse ? **it_incoming : **it_outgoing;
     core::tEdgeAggregator* dest_aggregator = trace_reverse ? &aggregated_edge.source : &aggregated_edge.destination;
 #endif
-    if ((!dest_aggregator) || tExecutionControl::Find(*dest_aggregator)->GetAnnotated<core::tFrameworkElement>() != &thread_container)
+    tExecutionControl* execution_control = dest_aggregator ? tExecutionControl::Find(*dest_aggregator) : nullptr;
+    if ((!execution_control) || execution_control->GetAnnotated<core::tFrameworkElement>() != &thread_container)
     {
       continue;
     }
