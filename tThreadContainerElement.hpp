@@ -90,6 +90,26 @@ tThreadContainerElement<BASE>::~tThreadContainerElement()
 }
 
 template <typename BASE>
+void tThreadContainerElement<BASE>::ExecuteCycle()
+{
+  if (!thread.get())
+  {
+    rrlib::thread::tLock l(mutex);
+    tThreadContainerThread* thread_tmp = new tThreadContainerThread(*this, cycle_time.Get(), warn_on_cycle_time_exceed.Get(), execution_duration, execution_details);
+    thread_tmp->SetAutoDelete();
+    thread = std::static_pointer_cast<tThreadContainerThread>(thread_tmp->GetSharedPtr());
+    thread->StopThread();
+    thread->Start();
+    thread->Join();
+  }
+  else
+  {
+    assert(!thread->IsAlive());
+  }
+  thread->MainLoopCallback();
+}
+
+template <typename BASE>
 void tThreadContainerElement<BASE>::JoinThread()
 {
   rrlib::thread::tLock l(mutex);

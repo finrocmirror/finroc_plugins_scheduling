@@ -602,6 +602,7 @@ void tThreadContainerThread::MainLoopCallback()
     for (size_t i = 0u; i < schedule.size(); i++)
     {
       current_task = schedule[i];
+      //FINROC_LOG_PRINT(DEBUG_WARNING, "Executing ", current_task->GetLogDescription());
       current_task->task.ExecuteTask();
     }
     execution_count++;

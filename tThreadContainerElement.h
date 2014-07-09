@@ -86,6 +86,15 @@ public:
   virtual ~tThreadContainerElement();
 
   /*!
+   * Execute one cycle manually.
+   * This can be handy for test programs (e.g. for accelerating them)
+   * and is not meant for "normal" applications.
+   *
+   * StartExecution() must not be called when using this method.
+   */
+  void ExecuteCycle();
+
+  /*!
    * \return Cycle time in milliseconds
    */
   inline rrlib::time::tDuration GetCycleTime()
