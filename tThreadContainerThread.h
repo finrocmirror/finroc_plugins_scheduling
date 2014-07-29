@@ -108,8 +108,6 @@ public:
 
   virtual void Run() override;
 
-  virtual void StopThread() override;
-
 //----------------------------------------------------------------------
 // Private fields and methods
 //----------------------------------------------------------------------

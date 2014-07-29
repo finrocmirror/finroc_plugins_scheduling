@@ -69,11 +69,11 @@ template <typename ... ARGS>
 tThreadContainerElement<BASE>::tThreadContainerElement(ARGS && ... args) :
   BASE(args...),
   rt_thread("Realtime Thread", this, false),
-  cycle_time("Cycle Time", this, std::chrono::milliseconds(40), data_ports::tBounds<rrlib::time::tDuration>(rrlib::time::tDuration::zero(), std::chrono::seconds(60))),
   warn_on_cycle_time_exceed("Warn on cycle time exceed", this, true),
-  thread(),
   execution_duration("Execution Duration", new core::tFrameworkElement(this, "Profiling")),
   execution_details("Details", execution_duration.GetParent(), IsProfilingEnabled() ? BASE::tFlag::PORT : BASE::tFlag::DELETED),
+  cycle_time("Cycle Time", this, std::chrono::milliseconds(40), data_ports::tBounds<rrlib::time::tDuration>(rrlib::time::tDuration::zero(), std::chrono::seconds(60))),
+  thread(),
   mutex("tThreadContainerElement", static_cast<int>(core::tLockOrderLevel::RUNTIME_REGISTER) - 1)
 {
   this->AddAnnotation(*new tExecutionControl(*this));

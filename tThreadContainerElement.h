@@ -77,6 +77,23 @@ class tThreadContainerElement : public BASE, public tStartAndPausable
 //----------------------------------------------------------------------
 public:
 
+  /*! Should this container contain a real-time thread? */
+  parameters::tStaticParameter<bool> rt_thread;
+
+  /*! Warn on cycle time exceed */
+  parameters::tStaticParameter<bool> warn_on_cycle_time_exceed;
+
+  /*! Port to publish time spent in last call to MainLoopCallback() */
+  data_ports::tOutputPort<rrlib::time::tDuration> execution_duration;
+
+  /*!
+   * Port to publish details on execution (port is only created if profiling is enabled)
+   * The first element contains the profile the whole thread container.
+   * The other elements contain the profile the executed tasks - in the order of their execution
+   */
+  data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details;
+
+
   /*!
    * All constructor parameters are forwarded to class BASE (usually parent, name, flags)
    */
@@ -141,27 +158,11 @@ public:
 //----------------------------------------------------------------------
 private:
 
-  /*! Should this container contain a real-time thread? */
-  parameters::tStaticParameter<bool> rt_thread;
-
   /*! Thread cycle time */
   parameters::tStaticParameter<rrlib::time::tDuration> cycle_time;
 
-  /*! Warn on cycle time exceed */
-  parameters::tStaticParameter<bool> warn_on_cycle_time_exceed;
-
   /*! Thread - while program is running - in pause mode null */
   std::shared_ptr<tThreadContainerThread> thread;
-
-  /*! Port to publish time spent in last call to MainLoopCallback() */
-  data_ports::tOutputPort<rrlib::time::tDuration> execution_duration;
-
-  /*!
-   * Port to publish details on execution (port is only created if profiling is enabled)
-   * The first element contains the profile the whole thread container.
-   * The other elements contain the profile the executed tasks - in the order of their execution
-   */
-  data_ports::tOutputPort<std::vector<tTaskProfile>> execution_details;
 
   /*! Mutex for operations on thread container */
   rrlib::thread::tOrderedMutex mutex;

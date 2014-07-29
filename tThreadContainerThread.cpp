@@ -140,6 +140,7 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
 
 tThreadContainerThread::~tThreadContainerThread()
 {
+  this->thread_container.GetRuntime().RemoveListener(*this);
   single_thread_container = nullptr;
 }
 
@@ -696,13 +697,6 @@ void tThreadContainerThread::Run()
 {
   this->thread_container.GetRuntime().AddListener(*this);
   tLoopThread::Run();
-}
-
-void tThreadContainerThread::StopThread()
-{
-  tLock lock(this->thread_container.GetStructureMutex());
-  this->thread_container.GetRuntime().RemoveListener(*this);
-  tLoopThread::StopThread();
 }
 
 //----------------------------------------------------------------------
