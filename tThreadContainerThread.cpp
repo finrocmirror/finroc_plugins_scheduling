@@ -132,6 +132,7 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
                      current_task(NULL)
 {
   this->SetName("ThreadContainer " + thread_container.GetName());
+  this->thread_container.GetRuntime().AddListener(*this);
 #ifdef RRLIB_SINGLE_THREADED
   assert(single_thread_container == nullptr);
   single_thread_container = this;
@@ -695,7 +696,6 @@ void tThreadContainerThread::OnFrameworkElementChange(core::tRuntimeListener::tE
 
 void tThreadContainerThread::Run()
 {
-  this->thread_container.GetRuntime().AddListener(*this);
   tLoopThread::Run();
 }
 
