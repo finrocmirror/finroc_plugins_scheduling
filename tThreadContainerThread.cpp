@@ -601,7 +601,7 @@ void tThreadContainerThread::MainLoopCallback()
 
   if (execution_details.GetWrapped() == nullptr || execution_count == 0) // we skip profiling the first/initial execution
   {
-    current_cycle_start_application_time = IsUsingApplicationTime() ? tLoopThread::GetCurrentCycleStartTime() : rrlib::time::Now();
+    current_cycle_start_application_time = IsUsingApplicationTime() && this->IsAlive() ? tLoopThread::GetCurrentCycleStartTime() : rrlib::time::Now();
 
     execution_duration.Publish(GetLastCycleTime());
     for (size_t i = 0u; i < schedule.size(); i++)
