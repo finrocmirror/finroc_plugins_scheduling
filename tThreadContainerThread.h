@@ -97,6 +97,16 @@ public:
   }
 
   /*!
+   * (TODO: Add method to structure::tModuleBase to access this more conveniently?)
+   *
+   * \return Start time of current cycle (unlike the base class, always returns time in 'application time')
+   */
+  inline rrlib::time::tTimestamp GetCurrentCycleStartTime()
+  {
+    return current_cycle_start_application_time;
+  }
+
+  /*!
    * \return Shared Pointer to thread container thread
    */
   std::shared_ptr<tThreadContainerThread> GetSharedPtr()
@@ -147,12 +157,17 @@ private:
   /*! Number of times that schedule was executed */
   int64_t execution_count;
 
-
   /*!
    * Thread sets this to the task it is currently executing (for error message, should it get stuck)
    * NULL if not executing any task
    */
   tPeriodicFrameworkElementTask* current_task;
+
+  /*! Start time of current control cycle in application time */
+  rrlib::time::tTimestamp current_cycle_start_application_time;
+
+  /*! Contains pointer to the only thread container in single threaded mode */
+  static tThreadContainerThread* single_thread_container;
 
   /*!
    * Helper function for debug output.
@@ -161,9 +176,6 @@ private:
    * \return String with fully-qualified names of each attached framework element of list elements in a new line
    */
   std::string CreateLoopDebugOutput(const std::vector<tPeriodicFrameworkElementTask*>& task_list);
-
-  /*! Contains pointer to the only thread container in single threaded mode */
-  static tThreadContainerThread* single_thread_container;
 
   /*!
    * Applies function to each task connected with specified edge aggregator.

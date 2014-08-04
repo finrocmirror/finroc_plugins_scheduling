@@ -129,7 +129,8 @@ tThreadContainerThread::tThreadContainerThread(core::tFrameworkElement& thread_c
                      total_execution_duration(0),
                      max_execution_duration(0),
                      execution_count(0),
-                     current_task(NULL)
+                     current_task(NULL),
+                     current_cycle_start_application_time(rrlib::time::cNO_TIME)
 {
   this->SetName("ThreadContainer " + thread_container.GetName());
   this->thread_container.GetRuntime().AddListener(*this);
@@ -596,10 +597,12 @@ void tThreadContainerThread::MainLoopCallback()
   }
 
   // execute tasks
-  SetDeadLine(rrlib::time::Now() + GetCycleTime() * 4 + std::chrono::seconds(1));
+  SetDeadLine(rrlib::time::Now() + GetCycleTime() * 4 + std::chrono::seconds(4));
 
   if (execution_details.GetWrapped() == nullptr || execution_count == 0) // we skip profiling the first/initial execution
   {
+    current_cycle_start_application_time = IsUsingApplicationTime() ? tLoopThread::GetCurrentCycleStartTime() : rrlib::time::Now();
+
     execution_duration.Publish(GetLastCycleTime());
     for (size_t i = 0u; i < schedule.size(); i++)
     {
@@ -614,6 +617,7 @@ void tThreadContainerThread::MainLoopCallback()
     data_ports::tPortDataPointer<std::vector<tTaskProfile>> details = execution_details.GetUnusedBuffer();
     details->resize(schedule.size() + 1);
     rrlib::time::tTimestamp start = rrlib::time::Now(true);
+    current_cycle_start_application_time = start;
 
     for (size_t i = 0u; i < schedule.size(); i++)
     {
