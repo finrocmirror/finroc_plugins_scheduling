@@ -32,6 +32,7 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include "core/tLockOrderLevel.h"
+#include "core/port/tPortGroup.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -70,7 +71,7 @@ tThreadContainerElement<BASE>::tThreadContainerElement(ARGS && ... args) :
   BASE(args...),
   rt_thread("Realtime Thread", this, false),
   warn_on_cycle_time_exceed("Warn on cycle time exceed", this, true),
-  execution_duration("Execution Duration", new core::tFrameworkElement(this, "Profiling")),
+  execution_duration("Execution Duration", new core::tPortGroup(this, "Profiling", core::tFrameworkElementFlag::INTERFACE, data_ports::cDEFAULT_OUTPUT_PORT_FLAGS)),
   execution_details("Details", execution_duration.GetParent(), IsProfilingEnabled() ? BASE::tFlag::PORT : BASE::tFlag::DELETED),
   cycle_time("Cycle Time", this, std::chrono::milliseconds(40), data_ports::tBounds<rrlib::time::tDuration>(rrlib::time::tDuration::zero(), std::chrono::seconds(60))),
   thread(),
