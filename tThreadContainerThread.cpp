@@ -207,7 +207,7 @@ void tThreadContainerThread::ForEachConnectedTask(core::tAbstractPort& origin, s
   for (; trace_reverse ? it_incoming != end_incoming : it_outgoing != end_outgoing; Increment(trace_reverse, it_incoming, it_outgoing))
   {
 #ifdef FINROC_PORT_BASED_SCHEDULING
-    core::tAbstractPort& dest_port = trace_reverse ? *it_incoming : *it_outgoing;
+    core::tAbstractPort& dest_port = trace_reverse ? it_incoming->Source() : it_outgoing->Destination();
     core::tEdgeAggregator* dest_aggregator = core::tEdgeAggregator::GetAggregator(dest_port);
 #else
     core::tAggregatedEdge& aggregated_edge = trace_reverse ? **it_incoming : **it_outgoing;
@@ -311,8 +311,8 @@ void tThreadContainerThread::HandleWatchdogAlert()
   }
   else
   {
-    std::string stuck_name = task->incoming.size() > 0 ? task->incoming[0]->GetQualifiedName() : task->GetAnnotated<core::tFrameworkElement>()->GetQualifiedName();
-    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", stuck_name, "'. Please check your code for infinite loops etc.!");
+    core::tFrameworkElement* stuck_element = task->incoming.size() > 0 ? task->incoming[0] : task->GetAnnotated<core::tFrameworkElement>();
+    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", stuck_element, "'. Please check your code for infinite loops etc.!");
   }
   tWatchDogTask::Deactivate();
 }
@@ -682,9 +682,9 @@ void tThreadContainerThread::MainLoopCallback()
   tWatchDogTask::Deactivate();
 }
 
-void tThreadContainerThread::OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target)
+void tThreadContainerThread::OnConnectorChange(core::tRuntimeListener::tEvent change_type, core::tConnector& connector)
 {
-  if (source.IsChildOf(this->thread_container) && target.IsChildOf(this->thread_container))
+  if (connector.Source().IsChildOf(this->thread_container) && connector.Destination().IsChildOf(this->thread_container))
   {
     reschedule = true;
   }
@@ -696,6 +696,10 @@ void tThreadContainerThread::OnFrameworkElementChange(core::tRuntimeListener::tE
   {
     reschedule = true;
   }
+}
+
+void tThreadContainerThread::OnUriConnectorChange(core::tRuntimeListener::tEvent change_type, core::tUriConnector& connector)
+{
 }
 
 void tThreadContainerThread::Run()

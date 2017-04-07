@@ -109,14 +109,16 @@ std::string tPeriodicFrameworkElementTask::GetLogDescription()
   {
     return "Unattached task";
   }
+  std::stringstream stream;
   if (annotated->GetFlag(core::tFrameworkElement::tFlag::INTERFACE))
   {
-    return annotated->GetParent()->GetQualifiedName() + "  (" + (annotated->GetFlag(core::tFrameworkElement::tFlag::SENSOR_DATA) ? "Sense" : "Control") + ")";
+    stream << *annotated->GetParent() << "  (" << (annotated->GetFlag(core::tFrameworkElement::tFlag::SENSOR_DATA) ? "Sense" : "Control") << ")";
   }
   else
   {
-    return annotated->GetQualifiedName();
+    stream << *annotated;
   }
+  return stream.str();
 }
 
 bool tPeriodicFrameworkElementTask::IsSenseTask()

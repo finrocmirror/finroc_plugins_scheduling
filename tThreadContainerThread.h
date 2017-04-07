@@ -207,9 +207,9 @@ private:
 
   virtual void HandleWatchdogAlert() override;
 
-  virtual void OnEdgeChange(core::tRuntimeListener::tEvent change_type, core::tAbstractPort& source, core::tAbstractPort& target) override;
-
+  virtual void OnConnectorChange(tEvent change_type, core::tConnector& connector) override;
   virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element) override;
+  virtual void OnUriConnectorChange(tEvent change_type, core::tUriConnector& connector);
 };
 
 //----------------------------------------------------------------------
