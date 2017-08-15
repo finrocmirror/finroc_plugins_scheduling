@@ -312,7 +312,7 @@ void tThreadContainerThread::HandleWatchdogAlert()
   else
   {
     core::tFrameworkElement* stuck_element = task->incoming.size() > 0 ? task->incoming[0] : task->GetAnnotated<core::tFrameworkElement>();
-    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", stuck_element, "'. Please check your code for infinite loops etc.!");
+    FINROC_LOG_PRINT(ERROR, "Got stuck executing task associated with '", *stuck_element, "'. Please check your code for infinite loops etc.!");
   }
   tWatchDogTask::Deactivate();
 }
