@@ -209,7 +209,7 @@ private:
 
   virtual void OnConnectorChange(tEvent change_type, core::tConnector& connector) override;
   virtual void OnFrameworkElementChange(core::tRuntimeListener::tEvent change_type, core::tFrameworkElement& element) override;
-  virtual void OnUriConnectorChange(tEvent change_type, core::tUriConnector& connector);
+  virtual void OnUriConnectorChange(tEvent change_type, core::tUriConnector& connector) override;
 };
 
 //----------------------------------------------------------------------
